@@ -3,6 +3,7 @@ import chess.engine
 import random
 import platform
 import os
+from src.config import load_or_create_config
 
 def get_stockfish_path():
     system = platform.system()
@@ -16,7 +17,11 @@ def get_stockfish_path():
         raise RuntimeError("Unsupported OS for Stockfish")
 
 class ChessGame:
-    def __init__(self, player_color='white', player_elo=1200, computer_elo=1500):
+    def __init__(self, player_color='white', player_elo=1200, computer_elo=1500, bot = None):
+        if not bot:
+            self.bot = load_or_create_config().default_character
+        else:
+            self.bot = bot
         self.board = chess.Board()
 
         if player_color.lower() not in ['white', 'black']:

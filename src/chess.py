@@ -57,10 +57,22 @@ class ChessGame:
         except ValueError:
             print("Invalid move format. Use UCI format like 'e2e4'.")
 
-    def computer_move(self):
+    def computer_move(self, elo=None):
         if self.board.is_game_over():
             print("Game over. No move for computer.")
             return
+
+        if elo:
+            self.engine.configure({
+                "UCI_LimitStrength": True,
+                "UCI_Elo": elo
+            })
+        else:
+            # Use default elo
+            self.engine.configure({
+                "UCI_LimitStrength": True,
+                "UCI_Elo": self.computer_elo
+            })
 
         result = self.engine.play(self.board, chess.engine.Limit(time=0.1))
         self.board.push(result.move)

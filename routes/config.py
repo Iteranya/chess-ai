@@ -5,9 +5,11 @@ import os
 from fastapi import APIRouter, Body, HTTPException
 from typing import List, Set
 import json
-from api.models.schemas import BotConfigModel, PatchOperation
-from api.constants import CONFIG_FILE
-from api.utils.file_operations import read_json_file, write_json_file, set_nested_value, remove_nested_value
+from src.config import CONFIG_PATH as CONFIG_FILE
+from pydantic import Field, BaseModel
+from utils.file_operations import read_json_file, write_json_file
+
+
 PRESERVE_FIELDS: Set[str] = {'ai_key', 'discord_key'}
 
 REQUIRED_FIELDS: Set[str] = {'default_character', 'ai_endpoint', 'base_llm'}
@@ -16,6 +18,25 @@ router = APIRouter(
     prefix="/config",
     tags=["Bot Configuration"]
 )
+
+class BotConfigModel(BaseModel):
+    default_character: str = Field("Viel", description="Default character name")
+    ai_endpoint: str = Field("https://generativelanguage.googleapis.com/v1beta/openai/", 
+                           description="AI API endpoint")
+    base_llm: str = Field("gemini-2.5-pro-exp-03-25", description="Base LLM model name")
+    temperature: float = Field(0.5, description="Temperature setting for AI generation")
+    ai_key: str = Field("", description="AI API key")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "default_character": "Viel",
+                "ai_endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/",
+                "base_llm": "gemini-2.5-pro-exp-03-25",
+                "temperature": 0.7,
+                "ai_key": "your-api-key",
+            }
+        }
 
 @router.get("/", response_model=BotConfigModel)
 async def get_config():
@@ -62,24 +83,3 @@ async def update_config(config: BotConfigModel = Body(..., description="Updated 
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating config: {str(e)}")
-
-@router.patch("/", response_model=BotConfigModel)
-async def patch_config(operations: List[PatchOperation] = Body(..., description="Patch operations")):
-    """Partially update the bot configuration."""
-    if not os.path.exists(CONFIG_FILE):
-        data = BotConfigModel().dict()
-    else:
-        data = read_json_file(CONFIG_FILE)
-    
-    for op in operations:
-        if op.op == "replace":
-            data = set_nested_value(data, op.path, op.value)
-        elif op.op == "add":
-            data = set_nested_value(data, op.path, op.value)
-        elif op.op == "remove":
-            data = remove_nested_value(data, op.path)
-        else:
-            raise HTTPException(status_code=400, detail=f"Unsupported operation: {op.op}")
-    
-    write_json_file(CONFIG_FILE, data)
-    return data

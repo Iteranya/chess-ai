@@ -1,5 +1,6 @@
 import os
 import json
+CHARACTER_DIRECTORY = "res/characters"
 
 class AICharacter:
     def __init__(self, bot_name:str):
@@ -25,7 +26,7 @@ class AICharacter:
     
     def saveDictToJson(self):
         data = self.char_dict
-        json_path = f"../characters/{self.bot_name}.json"
+        json_path = f"../characters/{self.bot_name}/main.json"
         try:
             with open(json_path, 'w') as f:
                 # Save the dictionary as JSON
@@ -37,25 +38,23 @@ class AICharacter:
             print(f"I/O error occurred while writing to {json_path}: {e}")
 
     def get_card(self,bot_name: str)->dict:
-        directory = "res/characters"
-        for filename in os.listdir(directory):
-            if filename.endswith(".json"):
-                filepath = os.path.join(directory, filename)
-                try:
-                    # Open and load JSON file
-                    with open(filepath, 'r', encoding='utf-8') as file:
-                        data = json.load(file)
+        directory = os.path.join(CHARACTER_DIRECTORY,bot_name)
+        filepath = os.path.join(directory, "main.json")
+        try:
+            # Open and load JSON file
+            with open(filepath, 'r', encoding='utf-8') as file:
+                data = json.load(file)
 
-                    # Check if 'name' field matches target_name
-                    if "data" in data and str(data["data"]["name"]).lower() == str(bot_name).lower():
-                        return data["data"]
-                    elif "name" in data and str(data["name"]).lower() == str(bot_name).lower():
-                        return data
-                    
-                except json.JSONDecodeError:
-                    print(f"Error decoding JSON in file: {filepath}")
-                except Exception as e:
-                    print(f"Error processing file {filepath}: {e}")
+            # Check if 'name' field matches target_name
+            if "data" in data and str(data["data"]["name"]).lower() == str(bot_name).lower():
+                return data["data"]
+            elif "name" in data and str(data["name"]).lower() == str(bot_name).lower():
+                return data
+            
+        except json.JSONDecodeError:
+            print(f"Error decoding JSON in file: {filepath}")
+        except Exception as e:
+            print(f"Error processing file {filepath}: {e}")
 
     def replace_placeholders(self,data: dict, bot_name: str, user_name: str) -> dict:
 

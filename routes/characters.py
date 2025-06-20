@@ -8,14 +8,36 @@ from fastapi.responses import JSONResponse
 from pathlib import Path as FilePath
 from typing import Any, List
 
-from api.models.schemas import CharacterModel, PatchOperation
-from api.constants import CHARACTERS_DIR
-from api.utils.file_operations import read_json_file, write_json_file, set_nested_value, remove_nested_value
+from pydantic import BaseModel, Field
+
+from src.aiplayer import CHARACTER_DIRECTORY as CHARACTERS_DIR
+from utils.file_operations import read_json_file, write_json_file
 
 router = APIRouter(
     prefix="/characters",
     tags=["Characters"]
 )
+
+class CharacterModel(BaseModel):
+    name: str = Field(..., description="Name of the character")
+    persona: str = Field(..., description="Character persona description")
+    examples: List[str] = Field(default_factory=list, description="Example interactions")
+    instructions: str = Field("", description="Special instructions for the character")
+    avatar: str = Field("", description="URL or path to avatar image")
+    info: str = Field("", description="Additional info about the character")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "name": "Character1",
+                "persona": "A helpful assistant",
+                "examples": ["User: How are you? Character: I'm doing great!"],
+                "instructions": "Always be polite and helpful",
+                "avatar": "/images/char1.png",
+                "info": "Created on May 6, 2025"
+            }
+        }
+
 
 @router.get("/", response_model=List[str])
 async def list_characters():
@@ -164,31 +186,6 @@ async def update_character(
     write_json_file(file_path, character_dict)
     return character_dict
 
-@router.patch("/{character_name}", response_model=CharacterModel)
-async def patch_character(
-    character_name: str = Path(..., description="Name of the character"),
-    operations: List[PatchOperation] = Body(..., description="Patch operations")
-):
-    """Partially update a character configuration."""
-    file_path = f"{CHARACTERS_DIR}/{character_name}.json"
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail=f"Character '{character_name}' not found")
-    
-    data = read_json_file(file_path)
-    
-    for op in operations:
-        if op.op == "replace":
-            data = set_nested_value(data, op.path, op.value)
-        elif op.op == "add":
-            data = set_nested_value(data, op.path, op.value)
-        elif op.op == "remove":
-            data = remove_nested_value(data, op.path)
-        else:
-            raise HTTPException(status_code=400, detail=f"Unsupported operation: {op.op}")
-    
-    write_json_file(file_path, data)
-    return data
-
 @router.delete("/{character_name}")
 async def delete_character(character_name: str = Path(..., description="Name of the character")):
     """Delete a character configuration."""
@@ -201,5 +198,3 @@ async def delete_character(character_name: str = Path(..., description="Name of 
         return JSONResponse(content={"message": f"Character '{character_name}' deleted successfully"})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete character: {str(e)}")
-    
-# Add this to your existing routers/characters.py file

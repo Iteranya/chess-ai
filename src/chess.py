@@ -50,6 +50,9 @@ class ChessGame:
 
     def print_board(self):
         print(self.board)
+    
+    def get_current_board(self):
+        return self.board()
 
     def is_game_over(self):
         return self.board.is_game_over()
@@ -64,32 +67,52 @@ class ChessGame:
             move = chess.Move.from_uci(move_uci)
             if move in self.board.legal_moves:
                 self.board.push(move)
+                result = {"status": "ok", "move": move_uci}
+                print(result)
+                return result
             else:
-                print("Illegal move. Try again.")
+                result = {"status": "error", "message": "Illegal move"}
+                print(result)
+                return result
         except ValueError:
-            print("Invalid move format. Use UCI format like 'e2e4'.")
+            print({"status": "error", "message": "Invalid move format"})
+            return {"status": "error", "message": "Invalid move format"}
+
 
     def computer_move(self, elo=None):
         if self.board.is_game_over():
             print("Game over. No move for computer.")
-            return
+            return {"status": "error", "message": "Game over. No move for computer."}
 
-        if elo:
-            self.engine.configure({
-                "UCI_LimitStrength": True,
-                "UCI_Elo": elo
-            })
-        else:
-            # Use default elo
-            self.engine.configure({
-                "UCI_LimitStrength": True,
-                "UCI_Elo": self.computer_elo
-            })
+        # Configure ELO
+        target_elo = elo if elo else self.computer_elo
+        self.engine.configure({
+            "UCI_LimitStrength": True,
+            "UCI_Elo": target_elo
+        })
 
+        # Let Stockfish think for a bit
         result = self.engine.play(self.board, chess.engine.Limit(time=0.1))
         self.board.push(result.move)
-        print(f"Computer plays: {result.move}")
+
+        print(f"Computer plays: {result.move}")  # 👈 Debug print stays
+
+        return {
+            "status": "ok",
+            "move": result.move.uci(),
+            "fen": self.board.fen(),
+            "elo_used": target_elo,
+            "is_game_over": self.board.is_game_over(),
+            "result": self.board.result() if self.board.is_game_over() else None
+        }
+
 
     def close(self):
         self.engine.quit()
         print("Engine shut down. Thanks for playing!")
+
+    def __del__(self):
+        try:
+            self.engine.quit()
+        except Exception:
+            pass

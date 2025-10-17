@@ -34,7 +34,7 @@ class ChessGame:
             self.bot = load_or_create_config().default_character
         else:
             self.bot = bot
-        self.board = chess.Board()
+        self.board = chess.Board
 
         if player_color.lower() not in ['white', 'black']:
             raise ValueError("Color must be 'white' or 'black'")
@@ -52,7 +52,7 @@ class ChessGame:
         print(self.board)
     
     def get_current_board(self):
-        return self.board()
+        return self.board
 
     def is_game_over(self):
         return self.board.is_game_over()
